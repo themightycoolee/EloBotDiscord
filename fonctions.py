@@ -1,5 +1,7 @@
 from replit import db
 import discord
+import csv
+from datetime import datetime
 
 def calcul_elo(attaquant:str, defie:str, type_defi:str, resultat:str):
   data_att = db[attaquant]
@@ -86,3 +88,14 @@ def update_classement_trial():
     db[membres_trial[i][0]] = membres_trial[i][1:]
   print(membres)
   return
+
+def generate_csv():
+  now = datetime.now() # current date and time
+
+  name = "out_"+now.strftime("%m%d%Y%H%M%S")+".csv"
+  membres = [[i]+db[i][:] for i in db.keys()]
+  writer = csv.writer(open("files/"+name, 'w'))
+  writer.writerow(['id','name', 'elo_main', 'elo_trial', 'rank_main','rank_trial','nbr_victoires_main','nbr_victoires_trial','nbr_matchs_main','nbr_matchs_trial'])
+  for item in membres:
+    writer.writerow(item)
+  return name

@@ -34,7 +34,7 @@ async def register(ctx, *args):
   if len(args)==0:
     retour = "Command use: $register [name]"
   elif str(ctx.author.id) not in db.keys():
-    db[str(ctx.author.id)] = [args[0],1000,1000,0,0]
+    db[str(ctx.author.id)] = [args[0],1000,1000,0,0,0,0,0,0]
     retour = "Successfully registered as " + db[str(ctx.author.id)][0] + " !"
   else:
     name = db[str(ctx.author.id)][0]
@@ -81,11 +81,33 @@ async def elo(ctx):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def match(ctx, *args):
+  retour = ""
+  # print(args)
+  # print(len(ctx.message.mentions[:]))
+  if len(args)!=5 or len(ctx.message.mentions)!=2:
+    retour = "Command use: $match [@adversaire 1] [nombre de manches gagnées pour 1] [@adversaire 2] [nombre de manches gagnées pour 2] [type = main/trial]"
+  else:
+    if args[4].lower()!='main' and args[0].lower()!='trial':
+      retour = "Argument 4: 'main' ou 'trial' uniquement"
+    elif str(ctx.message.mentions[0].id) not in db.keys():
+      retour = "Argument 1: adversaire non enregistré / introuvable"
+    elif str(ctx.author.id) not in db.keys():
+      retour = "Vous n'êtes pas enregistré"
+    elif args[2].upper()!='V' and args[2].upper()!='D':
+      retour = "Argument 2: V ou D uniquement"
+    else:
+      embed = fonctions.calcul_elo(str(ctx.author.id), str(ctx.message.mentions[0].id), args[0].lower(), args[2].upper())
+      await ctx.send(embed=embed)
+      return
+  await ctx.send(retour)
   return
 
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def generate_csv(ctx, *args):
+  nom_fichier = fonctions.generate_csv() # TODO auto classement
+  embed=discord.Embed(title="Votre fichier", url="https://EloBotDiscord.themightycoolee.repl.co/get/" + nom_fichier, color=0xffff00)
+  await ctx.send(embed=embed)
   return
 
 @bot.command()
@@ -95,6 +117,8 @@ async def classements(ctx):
   fonctions.update_classement_trial()
   await ctx.send(embed=fonctions.print_top(ctx, "trial"))
   return
+
+#TODO admin modif
 
 # Global checks for each command
 @bot.check
