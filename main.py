@@ -3,51 +3,13 @@ from discord.ext import commands
 import os
 from replit import db
 from keep_alive import keep_alive
+import checks
+import fonctions
 
 client = discord.Client()
 bot = commands.Bot("$")
 
-def calcul_elo(attaquant:str, defie:str, type_defi:str, resultat:str):
-  data_att = db[attaquant]
-  data_def = db[defie]
-  if type_defi=='main':
-    elo = 1
-  else: elo = 2
-
-  diff = data_def[elo] - data_att[elo]
-  if abs(diff) <= 200:
-    if resultat=="V": points = 20
-    else: points = -20
-  elif diff<0:
-    if resultat=="V": points = 5
-    else: points = -30
-  elif diff<300:
-    if resultat=="V": points = 30
-    else: points = -15
-  else:
-    if resultat=="V": points = 40
-    else: points = -10
-  
-  data_att[elo] = max(0, int(data_att[elo])+points)
-  data_def[elo] = max(0, int(data_def[elo])-points)
-  db[attaquant] = data_att
-  db[defie] = data_def
-  if(points)>0:
-    embed=discord.Embed(title="Challenge", description="résultat", color=0x00ff00)
-    embed.add_field(name=data_att[0], value=str(data_att[elo])+" (+"+str(points)+ ")", inline=True)
-    embed.add_field(name=data_def[0], value=str(data_def[elo])+" ("+str(-points)+ ")", inline=True)
-  else:
-    embed=discord.Embed(title="Challenge", description="résultat", color=0xff0000)
-    embed.add_field(name=data_att[0], value=str(data_att[elo])+" ("+str(points)+ ")", inline=True)
-    embed.add_field(name=data_def[0], value=str(data_def[elo])+" (+"+str(-points)+ ")", inline=True)
-  return embed
-
-def send_elo(key:str):
-  data = db[key]
-  embed=discord.Embed(title=data[0], color=0x00ff00)
-  embed.add_field(name="main", value=data[1], inline=True)
-  embed.add_field(name="trial", value=data[2], inline=True)
-  return embed
+# Format database : {pseudo, elo main, elo trial, classement_main, classement_elo}
 
 @bot.event
 async def on_ready():
@@ -72,7 +34,7 @@ async def register(ctx, *args):
   if len(args)==0:
     retour = "Command use: $register [name]"
   elif str(ctx.author.id) not in db.keys():
-    db[str(ctx.author.id)] = [args[0],1000,1000]
+    db[str(ctx.author.id)] = [args[0],1000,1000,0,0]
     retour = "Successfully registered as " + db[str(ctx.author.id)][0] + " !"
   else:
     name = db[str(ctx.author.id)][0]
@@ -104,7 +66,7 @@ async def challenge(ctx, *args):
     elif args[2].upper()!='V' and args[2].upper()!='D':
       retour = "Argument 2: V ou D uniquement"
     else:
-      embed = calcul_elo(str(ctx.author.id), str(ctx.message.mentions[0].id), args[0].lower(), args[2].upper())
+      embed = fonctions.calcul_elo(str(ctx.author.id), str(ctx.message.mentions[0].id), args[0].lower(), args[2].upper())
       await ctx.send(embed=embed)
       return
   await ctx.send(retour)
@@ -114,7 +76,25 @@ async def elo(ctx):
   if str(ctx.author.id) not in db.keys():
     await ctx.send("You are not registered !")
   else:
-    await ctx.send(embed=send_elo(str(ctx.author.id)))
+    await ctx.send(embed=fonctions.send_elo(str(ctx.author.id)))
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def match(ctx, *args):
+  return
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def generate_csv(ctx, *args):
+  return
+
+@bot.command()
+async def classements(ctx):
+  fonctions.update_classement_main()
+  await ctx.send(embed=fonctions.print_top(ctx, "main"))
+  fonctions.update_classement_trial()
+  await ctx.send(embed=fonctions.print_top(ctx, "trial"))
+  return
 
 # Global checks for each command
 @bot.check
@@ -122,7 +102,7 @@ def is_not_user(ctx):
   return ctx.author.id != bot.user.id
 
 keep_alive()
-bot.run(os.getenv('TOKEN'))
+bot.run(os.getenv('TOKEN')) # token in secrets (.env)
 
 '''
 @client.event
