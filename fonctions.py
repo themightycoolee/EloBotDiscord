@@ -38,6 +38,41 @@ def calcul_elo(attaquant:str, defie:str, type_defi:str, resultat:str):
     embed.add_field(name=data_def[0], value=str(data_def[elo])+" (+"+str(-points)+ ")", inline=True)
   return embed
 
+def match_elo(gagnant:str, perdant:str, type_defi:str):
+  gag = db[gagnant][:]
+  per = db[perdant][:]
+  points = 5
+  if type_defi.lower()=='trial':
+    elo = 2
+  else: elo = 1
+
+  diff = gag[elo] - per[elo]
+  if abs(diff)<=200:
+    points = 20
+  if diff<-300:
+    points = 40
+  elif diff<-200:
+    points = 30
+  elif abs(diff)<=200:
+    points = 20
+  elif diff<300:
+    points = 15
+  else:
+    points = 10
+  
+  gag[elo] = max(0, int(gag[elo]) + points)
+  gag[elo+4] = int(gag[elo+4]) + 1
+  gag[elo+6] = int(gag[elo+6]) + 1
+  per[elo] = max(0, int(per[elo]) - points)
+  per[elo+6] = int(per[elo+6]) + 1
+  db[gagnant] = gag
+  db[perdant] = per
+
+  embed=discord.Embed(title="Challenge", description="résultat", color=0x00ff00)
+  embed.add_field(name=gag[0], value=str(gag[elo])+" (+"+str(points)+ ")", inline=True)
+  embed.add_field(name=per[0], value=str(per[elo])+" ("+str(-points)+ ")", inline=True)
+  return embed
+
 def send_elo(key:str):
   data = db[key]
   embed=discord.Embed(title=data[0], color=0x00ff00)
@@ -73,7 +108,7 @@ def update_classement_main():
     else:
       membres_main[i][4] = i+1
     db[membres_main[i][0]] = membres_main[i][1:]
-  print(membres)
+  # print(membres)
   return
 
 def update_classement_trial():
@@ -86,7 +121,7 @@ def update_classement_trial():
     else:
       membres_trial[i][5] = i+1
     db[membres_trial[i][0]] = membres_trial[i][1:]
-  print(membres)
+  # print(membres)
   return
 
 def generate_csv():

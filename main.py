@@ -22,6 +22,7 @@ async def hello(ctx, *args):
   print(message)
   print(message.content)
   print(message.author.id)
+  print(message.guild.roles)
   if message.mentions:
     print(message.mentions)
     retour += message.mentions[0].name
@@ -79,7 +80,7 @@ async def elo(ctx):
     await ctx.send(embed=fonctions.send_elo(str(ctx.author.id)))
 
 @bot.command()
-@commands.has_permissions(administrator=True)
+@commands.has_role("☯ Hakaï Tenshi")
 async def match(ctx, *args):
   retour = ""
   # print(args)
@@ -87,28 +88,78 @@ async def match(ctx, *args):
   if len(args)!=5 or len(ctx.message.mentions)!=2:
     retour = "Command use: $match [@adversaire 1] [nombre de manches gagnées pour 1] [@adversaire 2] [nombre de manches gagnées pour 2] [type = main/trial]"
   else:
-    if args[4].lower()!='main' and args[0].lower()!='trial':
-      retour = "Argument 4: 'main' ou 'trial' uniquement"
+    if args[4].lower()!='main' and args[4].lower()!='trial':
+      retour = "Argument 5: 'main' ou 'trial' uniquement"
     elif str(ctx.message.mentions[0].id) not in db.keys():
       retour = "Argument 1: adversaire non enregistré / introuvable"
-    elif str(ctx.author.id) not in db.keys():
-      retour = "Vous n'êtes pas enregistré"
-    elif args[2].upper()!='V' and args[2].upper()!='D':
-      retour = "Argument 2: V ou D uniquement"
+    elif str(ctx.message.mentions[1].id) not in db.keys():
+      retour = "Argument 3: adversaire non enregistré / introuvable"
+    elif args[1].isnumeric() == False:
+      retour = "Argument 2: uniquement des chiffres"
+    elif args[3].isnumeric() == False:
+      retour = "Argument 4: uniquement des chiffres"
     else:
-      embed = fonctions.calcul_elo(str(ctx.author.id), str(ctx.message.mentions[0].id), args[0].lower(), args[2].upper())
+      if int(args[1])>int(args[3]):
+        embed = fonctions.match_elo(str(ctx.message.mentions[0].id), str(ctx.message.mentions[1].id), args[4].lower())
+      else:
+        embed = fonctions.match_elo(str(ctx.message.mentions[1].id), str(ctx.message.mentions[0].id),args[4].lower())
+      if args[4].lower()=='main':
+        fonctions.update_classement_main()
+      else:
+        fonctions.update_classement_trial()
       await ctx.send(embed=embed)
       return
   await ctx.send(retour)
   return
 
 @bot.command()
-@commands.has_permissions(administrator=True)
+@commands.has_role("☯ Hakaï Tenshi")
 async def generate_csv(ctx, *args):
-  nom_fichier = fonctions.generate_csv() # TODO auto classement
+  nom_fichier = fonctions.generate_csv() # TODO auto classement selon type main/trial
   embed=discord.Embed(title="Votre fichier", url="https://EloBotDiscord.themightycoolee.repl.co/get/" + nom_fichier, color=0xffff00)
   await ctx.send(embed=embed)
   return
+
+@bot.command()
+@commands.has_role("☯ Hakaï Tenshi")
+async def set_elo(ctx, *args):
+  if len(args)!=3:
+    await ctx.send("Command use: $set_elo [@user] [type: main/trial] [valeur]")
+    return
+  else:
+    if str(ctx.message.mentions[0].id) not in db.keys():
+      await ctx.send("Argument 1: adversaire non enregistré / introuvable")
+      return
+    elif args[1].lower()!='main' and args[1].lower()!='trial':
+      await ctx.send("Argument 2: 'main' ou 'trial' uniquement")
+      return
+    elif args[2].isnumeric() == False:
+      await ctx.send("Argument 3: uniquement des chiffres")
+      return
+    else:
+      data = db[str(ctx.message.mentions[0].id)][:]
+      if args[1].lower()=='main':
+        elo = 1
+      else: elo = 2
+      data[elo] = int(args[2])
+      db[str(ctx.message.mentions[0].id)] = data
+      await ctx.send("Utilisateur {} désomais à {} sur l'elo ".format(data[0], data[elo]) + args[1].lower())
+      return
+
+@bot.command()
+@commands.has_role("☯ Hakaï Tenshi")
+async def admin_register(ctx, *args):
+  if len(args)!=2:
+    await ctx.send("Command use: $admin_register [@user] [pseudo]")
+    return
+  else:
+    if str(ctx.message.mentions[0].id) in db.keys():
+      await ctx.send("Argument 1: adversaire déjà enregistré en tant que " + db[str(ctx.message.mentions[0].id)][0])
+      return
+    else:
+      db[str(ctx.message.mentions[0].id)] = [args[1],1000,1000,0,0,0,0,0,0]
+      await ctx.send("Successfully registered as " + db[str(ctx.message.mentions[0].id)][0] + " !")
+      return
 
 @bot.command()
 async def classements(ctx):
@@ -118,7 +169,6 @@ async def classements(ctx):
   await ctx.send(embed=fonctions.print_top(ctx, "trial"))
   return
 
-#TODO admin modif
 
 # Global checks for each command
 @bot.check
