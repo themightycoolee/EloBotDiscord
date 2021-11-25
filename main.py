@@ -6,6 +6,9 @@ from keep_alive import keep_alive
 import checks
 import fonctions
 
+# administrateur = "☯ Hakaï Tenshi" //admin hakai
+administrateur = '☯ Hakaï Tenshi', 'Officier', 'Maître de guilde'
+
 client = discord.Client()
 bot = commands.Bot("$")
 
@@ -16,7 +19,9 @@ async def on_ready():
   print('We have logged in as {0.user}'.format(bot))
 
 @bot.command()
+@commands.has_any_role(*administrateur)
 async def hello(ctx, *args):
+  """Envoie un bonjour."""
   message = ctx.message
   retour = 'Hello '
   print(message)
@@ -31,9 +36,10 @@ async def hello(ctx, *args):
 
 @bot.command()
 async def register(ctx, *args):
+  """Commande pour s'enregistrer."""
   retour = ""
   if len(args)==0:
-    retour = "Command use: $register [name]"
+    retour = "Command use: $register [pseudo]"
   elif str(ctx.author.id) not in db.keys():
     db[str(ctx.author.id)] = [args[0],1000,1000,0,0,0,0,0,0]
     retour = "Successfully registered as " + db[str(ctx.author.id)][0] + " !"
@@ -43,7 +49,22 @@ async def register(ctx, *args):
   await ctx.send(retour)
 
 @bot.command()
+async def pseudo(ctx, *args):
+  """Commande pour changer son pseudo."""
+  if len(args)!=1:
+    retour = "Command use: $pseudo [pseudo]"
+  elif str(ctx.author.id) not in db.keys():
+    retour = "You are not registered !"
+  else:
+    tmp = db[str(ctx.author.id)]
+    tmp[0] = args[0]
+    db[str(ctx.author.id)] = tmp
+    retour = "Your pseudo is now " + db[str(ctx.author.id)][0] + " !"
+  await ctx.send(retour)
+
+@bot.command()
 async def unregister(ctx):
+  """Commande pour se retirer. Pas de retour en arrière !"""
   if str(ctx.author.id) in db.keys():
     del db[str(ctx.author.id)]
     await ctx.send("Successfully unregistered")
@@ -51,6 +72,7 @@ async def unregister(ctx):
     await ctx.send("You are not registered !")
 
 @bot.command()
+@commands.has_any_role("dev")
 async def challenge(ctx, *args):
   retour = ""
   print(args)
@@ -74,14 +96,16 @@ async def challenge(ctx, *args):
 
 @bot.command()
 async def elo(ctx):
+  """Affiche l'elo."""
   if str(ctx.author.id) not in db.keys():
     await ctx.send("You are not registered !")
   else:
     await ctx.send(embed=fonctions.send_elo(str(ctx.author.id)))
 
 @bot.command()
-@commands.has_role("☯ Hakaï Tenshi")
+@commands.has_any_role(*administrateur)
 async def match(ctx, *args):
+  """Commande admin pour un match."""
   retour = ""
   # print(args)
   # print(len(ctx.message.mentions[:]))
@@ -113,16 +137,17 @@ async def match(ctx, *args):
   return
 
 @bot.command()
-@commands.has_role("☯ Hakaï Tenshi")
+@commands.has_any_role(*administrateur)
 async def generate_csv(ctx, *args):
-  nom_fichier = fonctions.generate_csv() # TODO auto classement selon type main/trial
+  nom_fichier = fonctions.generate_csv() # TODO better format
   embed=discord.Embed(title="Votre fichier", url="https://EloBotDiscord.themightycoolee.repl.co/get/" + nom_fichier, color=0xffff00)
   await ctx.send(embed=embed)
   return
 
 @bot.command()
-@commands.has_role("☯ Hakaï Tenshi")
+@commands.has_any_role(*administrateur)
 async def set_elo(ctx, *args):
+  """Command admin pour définir manuellement l'elo."""
   if len(args)!=3:
     await ctx.send("Command use: $set_elo [@user] [type: main/trial] [valeur]")
     return
@@ -147,7 +172,7 @@ async def set_elo(ctx, *args):
       return
 
 @bot.command()
-@commands.has_role("☯ Hakaï Tenshi")
+@commands.has_any_role(*administrateur)
 async def admin_register(ctx, *args):
   if len(args)!=2:
     await ctx.send("Command use: $admin_register [@user] [pseudo]")
@@ -169,7 +194,9 @@ async def classements(ctx):
   await ctx.send(embed=fonctions.print_top(ctx, "trial"))
   return
 
-
+#TODO classement que par main/trial, refaire le self-report, check elo de qqn, help, commande défi, rendre inaccessible la commande challenge, classement global
+# le bot set des rôles aux meilleurs 
+# ordre : 'id','name', 'elo_main', 'elo_trial', 'rank_main','rank_trial','nbr_victoires_main','nbr_victoires_trial','nbr_matchs_main','nbr_matchs_trial'
 # Global checks for each command
 @bot.check
 def is_not_user(ctx):

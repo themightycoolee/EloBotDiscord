@@ -77,7 +77,11 @@ def send_elo(key:str):
   data = db[key]
   embed=discord.Embed(title=data[0], color=0x00ff00)
   embed.add_field(name="main", value=data[1], inline=True)
+  embed.add_field(name="\u200B", value="\u200B", inline=True)
+  embed.add_field(name="classement", value=data[3], inline=True)
   embed.add_field(name="trial", value=data[2], inline=True)
+  embed.add_field(name="\u200B", value="\u200B", inline=True)
+  embed.add_field(name="classement", value=data[4], inline=True)
   return embed
 
 def print_top(ctx, type_classement = "main", nbr = 10):
@@ -129,6 +133,7 @@ def generate_csv():
 
   name = "out_"+now.strftime("%m%d%Y%H%M%S")+".csv"
   membres = [[i]+db[i][:] for i in db.keys()]
+  membres = sorted(membres, key=lambda x: x[3])
   writer = csv.writer(open("files/"+name, 'w'))
   writer.writerow(['id','name', 'elo_main', 'elo_trial', 'rank_main','rank_trial','nbr_victoires_main','nbr_victoires_trial','nbr_matchs_main','nbr_matchs_trial'])
   for item in membres:
