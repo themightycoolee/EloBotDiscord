@@ -7,7 +7,7 @@ import checks
 import fonctions
 
 # administrateur = "☯ Hakaï Tenshi" //admin hakai
-administrateur = '☯ Hakaï Tenshi', 'Officier', 'Maître de guilde'
+administrateur = '☯ Hakaï Tenshi', 'Officier', 'Maître de guilde', "L'Omniscient"
 
 reactions = ["✅", "❌", "🗑️"]
 
@@ -20,20 +20,52 @@ bot = commands.Bot("$")
 async def on_ready():
   print('We have logged in as {0.user}'.format(bot))
 
-@client.event
+'''
+@bot.event
 async def on_reaction_add(reaction, user):
     message = reaction.message
 
-    print(message)
-    print(message.reaction.emoji.name)
+    # print(message)
+    # print(reaction.emoji)
+    # print(user.roles)
+    print(bot.user.id)
+    print(message.author.id)
     # check to see if the bot sent the reacted message
-    if message.author.id != client.user.id:
+    if message.author.id != bot.user.id:
       return
-    if message.reaction.author.roles not in administrateur:
+    is_admin = False
+    for role in user.roles:
+      if role.name in administrateur:
+        print("ici\n")
+        is_admin = True
+        break
+    if not is_admin:
       return
     # and ensure that the reacted emoji is the :wastebasket: emoji.
-    if reaction.emoji.name == reactions[2]:
-      message.delete()
+    if reaction.emoji == reactions[2]:
+      await message.delete()
+'''
+@bot.event
+async def on_raw_reaction_add(payload):
+    channel = await bot.fetch_channel(payload.channel_id)
+    message = await channel.fetch_message(payload.message_id)
+    user = payload.member
+    emoji = payload.emoji
+
+    # check to see if the bot sent the reacted message
+    if message.author.id != bot.user.id:
+      return
+    is_admin = False
+    for role in user.roles:
+      if role.name in administrateur:
+        is_admin = True
+        break
+    if not is_admin:
+      return
+    # and ensure that the reacted emoji is the :wastebasket: emoji.
+    if emoji.name == reactions[2]:
+      await message.delete()
+
 
 @bot.command()
 @commands.has_any_role(*administrateur)
