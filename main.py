@@ -9,6 +9,8 @@ import fonctions
 # administrateur = "☯ Hakaï Tenshi" //admin hakai
 administrateur = '☯ Hakaï Tenshi', 'Officier', 'Maître de guilde'
 
+reactions = ["✅", "❌", "🗑️"]
+
 client = discord.Client()
 bot = commands.Bot("$")
 
@@ -17,6 +19,21 @@ bot = commands.Bot("$")
 @bot.event
 async def on_ready():
   print('We have logged in as {0.user}'.format(bot))
+
+@client.event
+async def on_reaction_add(reaction, user):
+    message = reaction.message
+
+    print(message)
+    print(message.reaction.emoji.name)
+    # check to see if the bot sent the reacted message
+    if message.author.id != client.user.id:
+      return
+    if message.reaction.author.roles not in administrateur:
+      return
+    # and ensure that the reacted emoji is the :wastebasket: emoji.
+    if reaction.emoji.name == reactions[2]:
+      message.delete()
 
 @bot.command()
 @commands.has_any_role(*administrateur)
@@ -72,27 +89,47 @@ async def unregister(ctx):
     await ctx.send("You are not registered !")
 
 @bot.command()
-@commands.has_any_role("dev")
 async def challenge(ctx, *args):
-  retour = ""
-  print(args)
-  print(len(ctx.message.mentions[:]))
-  if len(args)!=3 or len(ctx.message.mentions)!=1:
-    retour = "Command use: $challenge [main/trial] [@adversaire] [V/D]"
+  """Commande pour lancer un défi."""
+  #TODO gérer si c'est main ou trial, pour les besoins actuel par défaut main
+  if len(args)!=1 or len(ctx.message.mentions)!=1:
+    retour = "Command use: $challenge [@défié]"
+  elif str(ctx.author.id) not in db.keys():
+    retour = "You are not registered !"
+  elif str(ctx.message.mentions[0].id) not in db.keys():
+    retour = "Challenger not found"
+  elif str(ctx.author.id) == str(ctx.message.mentions[0].id):
+    retour = "You can't challenge yourself..."
   else:
-    if args[0].lower()!='main' and args[0].lower()!='trial':
-      retour = "Argument 1: main ou trial uniquement"
-    elif str(ctx.message.mentions[0].id) not in db.keys():
-      retour = "Argument 1: adversaire non enregistré / introuvable"
-    elif str(ctx.author.id) not in db.keys():
-      retour = "Vous n'êtes pas enregistré"
-    elif args[2].upper()!='V' and args[2].upper()!='D':
-      retour = "Argument 2: V ou D uniquement"
-    else:
-      embed = fonctions.calcul_elo(str(ctx.author.id), str(ctx.message.mentions[0].id), args[0].lower(), args[2].upper())
-      await ctx.send(embed=embed)
-      return
-  await ctx.send(retour)
+    retour = fonctions.defi(str(ctx.author.id), str(ctx.message.mentions[0].id))
+  message = await ctx.send(retour)
+  if "?" in retour:
+    await message.add_reaction(emoji = reactions[0])
+    await message.add_reaction(emoji = reactions[1])
+  await message.add_reaction(emoji = reactions[2])
+
+# @bot.command()
+# @commands.has_any_role("dev")
+# async def challenge(ctx, *args):
+#   retour = ""
+#   print(args)
+#   print(len(ctx.message.mentions[:]))
+#   if len(args)!=3 or len(ctx.message.mentions)!=1:
+#     retour = "Command use: $challenge [main/trial] [@adversaire] [V/D]"
+#   else:
+#     if args[0].lower()!='main' and args[0].lower()!='trial':
+#       retour = "Argument 1: main ou trial uniquement"
+#     elif str(ctx.message.mentions[0].id) not in db.keys():
+#       retour = "Argument 1: adversaire non enregistré / introuvable"
+#     elif str(ctx.author.id) not in db.keys():
+#       retour = "Vous n'êtes pas enregistré"
+#     elif args[2].upper()!='V' and args[2].upper()!='D':
+#       retour = "Argument 2: V ou D uniquement"
+#     else:
+#       embed = fonctions.calcul_elo(str(ctx.author.id), str(ctx.message.mentions[0].id), args[0].lower(), args[2].upper())
+#       await ctx.send(embed=embed)
+#       return
+#   await ctx.send(retour)
 
 @bot.command()
 async def elo(ctx):
@@ -194,7 +231,8 @@ async def classements(ctx):
   await ctx.send(embed=fonctions.print_top(ctx, "trial"))
   return
 
-#TODO classement que par main/trial, refaire le self-report, check elo de qqn, help, commande défi, rendre inaccessible la commande challenge, classement global
+
+#TODO classement que par main/trial, refaire le self-report, check elo de qqn, commande défi --> reactions, classement global
 # le bot set des rôles aux meilleurs 
 # ordre : 'id','name', 'elo_main', 'elo_trial', 'rank_main','rank_trial','nbr_victoires_main','nbr_victoires_trial','nbr_matchs_main','nbr_matchs_trial'
 # Global checks for each command

@@ -139,3 +139,14 @@ def generate_csv():
   for item in membres:
     writer.writerow(item)
   return name
+
+def defi(id1:str, id2:str):
+  challenger = db[id1]
+  joueur2 = db[id2]
+
+  if challenger[1] <= joueur2[1]:
+    retour = "<@{}>, ".format(id2) + "vous avez été défié par <@{}>, vous ne pouvez pas refuser !".format(id1)
+  else:
+    retour = "<@{}>, ".format(id2) + "vous avez été défié par <@{}>, accepter le défi ?".format(id1)
+  
+  return retour
